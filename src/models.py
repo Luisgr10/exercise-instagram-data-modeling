@@ -1,37 +1,53 @@
 import os
 import sys
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String, Date
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy import create_engine
 from eralchemy2 import render_er
 
+
 Base = declarative_base()
 
-class Person(Base):
-    __tablename__ = 'person'
-    # Here we define columns for the table person
-    # Notice that each column is also a normal Python instance attribute.
+# Clase para representar a los usuarios
+class Usuario(Base):
+    __tablename__ = 'usuario'
     id = Column(Integer, primary_key=True)
-    name = Column(String(250), nullable=False)
+    username = Column(String(250), nullable=False)
+    email = Column(String(250), nullable=False)
+    password = Column(String(250), nullable=False)
+    publicaciones = relationship('Post', back_populates='usuario')  # Relación uno a muchos (un usuario puede tener muchas publicaciones)
+    comentarios = relationship('Comentario', back_populates='usuario')  # Relación uno a muchos (un usuario puede hacer muchos comentarios)
 
-class Address(Base):
-    __tablename__ = 'address'
-    # Here we define columns for the table address.
-    # Notice that each column is also a normal Python instance attribute.
-    id = Column(Integer, primary_key=True)
-    street_name = Column(String(250))
-    street_number = Column(String(250))
-    post_code = Column(String(250), nullable=False)
-    person_id = Column(Integer, ForeignKey('person.id'))
-    person = relationship(Person)
+# Clase para representar las publicaciones de los usuarios
+class Post(Base):
+    __tablename__ = 'post'
+    post_id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey('usuario.id'), nullable=False)
+    img_url = Column(String(250), nullable=False)
+    likes_count = Column(Integer, nullable=False)
+    usuario = relationship('Usuario', back_populates='publicaciones')  # Relación muchos a uno (muchos posts pueden pertenecer a un usuario)
+    comentarios = relationship('Comentario', back_populates='post')  # Relación uno a muchos (un post puede tener muchos comentarios)
+
+# Clase para representar los comentarios en las publicaciones
+class Comentario(Base):
+    __tablename__ = 'comentario'
+    comentario_id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey('post.post_id'), nullable=False)
+    usuario_id = Column(Integer, ForeignKey('usuario.id'), nullable=False)
+    usuario = relationship('Usuario', back_populates='comentarios')  # Relación muchos a uno (muchos comentarios pueden ser realizados por un usuario)
+    post = relationship('Post', back_populates='comentarios')  # Relación muchos a uno (muchos comentarios pueden pertenecer a un post)
+
+# Clase para representar la relación de seguir a otros usuarios
+class Seguidores(Base):
+    __tablename__ = 'seguidores'
+    seguidores_id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey('usuario.id'), nullable=False)
+    seguidor_id = Column(Integer, ForeignKey('usuario.id'), nullable=False)
+    usuario = relationship('Usuario', back_populates='seguidores', foreign_keys=[usuario_id])  # Relación muchos a uno (muchos seguidores pueden seguir a un usuario)
+    seguido = relationship('Usuario', back_populates='seguidos', foreign_keys=[seguidor_id])  # Relación muchos a uno (muchos usuarios pueden ser seguidos por un seguidor)
 
     def to_dict(self):
         return {}
 
-## Draw from SQLAlchemy base
-try:
-    result = render_er(Base, 'diagram.png')
-    print("Success! Check the diagram.png file")
-except Exception as e:
-    print("There was a problem genering the diagram")
-    raise e
+# Generar el diagrama ER y guardarlo como 'diagram.png'
+render_er(Base, 'diagram.png')
